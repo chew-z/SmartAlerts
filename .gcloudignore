@@ -1,0 +1,5 @@
+bin/**
+go.sum
+README.md
+.git/**
+.gitignore
