@@ -7,10 +7,31 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
-	"github.com/gocolly/colly/v2"
 	"github.com/gregdel/pushover"
 )
+
+/*Quotes - ..
+ */
+type Quotes []Quote
+
+/*Quote - ..
+ */
+type Quote struct {
+	Symbol           string  `json:"_symbol"`
+	AskPrice         float64 `json:"_ask_price"`
+	BidPrice         float64 `json:"_bid_price"`
+	RefBidPrice      float64 `json:"_ref_bid_price"`
+	HighBidPrice     float64 `json:"_high_bid_price"`
+	LowBidPrice      float64 `json:"_low_bid_price"`
+	MidPrice         float64 `json:"_mid_price"`
+	BidDayChange     float64 `json:"_bid_day_change"`
+	BidDayChangePcnt string  `json:"_bid_day_change_pcnt"`
+	QuoteTm          int64   `json:"_quote_tm"`
+	Pips             float64 `json:"_pips"`
+	PipsLot          float64 `json:"_pips_lot"`
+}
 
 var (
 	asset   = "FEUVOL"
@@ -18,11 +39,14 @@ var (
 	l       = os.Getenv("LOW")
 	appID   = os.Getenv("APP_ID")
 	groupID = os.Getenv("GROUP_ID")
+	city    = "Europe/Warsaw"
 )
 
-func init() {}
+func init() {
+}
 
-func main() {}
+func main() {
+}
 
 /*CloudAlert - ..
  */
@@ -52,29 +76,28 @@ func CloudAlert(w http.ResponseWriter, r *http.Request) {
 }
 
 func scrap(high *float64, low *float64) string {
-	var b = "OK"
-	// Instantiate default collector
-	c := colly.NewCollector()
-	c.OnHTML("div[id=symbol-bid]", func(e *colly.HTMLElement) {
-		b = e.Text
-		if bid, err := strconv.ParseFloat(b, 64); err == nil {
-			log.Printf("High: %.2f, Low: %.2f", *high, *low)
-			if bid > *high {
-				msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
-				alert(msg, "Making money")
-			} else if bid < *low {
-				msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
-				alert(msg, "Losing money!")
-			} else {
-				log.Printf("Bid: %.2f", bid)
-			}
+	var b string
+	url := fmt.Sprintf("https://api.30.bossa.pl/API/FX/v1/SYMBOLS/%s.", asset)
+	if response, err := http.Get(url); err != nil {
+		log.Fatalln(err.Error())
+	} else {
+		var body Quotes
+		location, _ := time.LoadLocation(city)
+		defer response.Body.Close()
+		json.NewDecoder(response.Body).Decode(&body)
+		tm := time.Unix(0, body[0].QuoteTm*int64(time.Millisecond))
+		bid := body[0].BidPrice
+		if bid > *high {
+			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
+			alert(msg, "Making money")
+		} else if bid < *low {
+			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
+			alert(msg, "Losing money!")
 		}
-	})
-	url := fmt.Sprintf("https://bossafx.pl/oferta/instrumenty/%s.", asset)
-	c.Visit(url)
-	// Wait until threads are finished
-	// c.Wait()
-
+		// log.Printf("High: %.2f, Low: %.2f", *high, *low)
+		// log.Printf("%s - Bid: %.2f", tm.In(location).Format("15:04:05"), body[0].BidPrice)
+		b = fmt.Sprintf("%s - Bid: %.2f", tm.In(location).Format("15:04:05"), bid)
+	}
 	return b
 }
 
