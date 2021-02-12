@@ -87,6 +87,8 @@ func scrap(high *float64, low *float64) string {
 		json.NewDecoder(response.Body).Decode(&body)
 		tm := time.Unix(0, body[0].QuoteTm*int64(time.Millisecond))
 		bid := body[0].BidPrice
+		chng := body[0].BidDayChange
+		pct := body[0].BidDayChangePcnt
 		if bid > *high {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
 			alert(msg, "Making money")
@@ -96,7 +98,7 @@ func scrap(high *float64, low *float64) string {
 		}
 		// log.Printf("High: %.2f, Low: %.2f", *high, *low)
 		// log.Printf("%s - Bid: %.2f", tm.In(location).Format("15:04:05"), body[0].BidPrice)
-		b = fmt.Sprintf("%s - Bid: %.2f", tm.In(location).Format("15:04:05"), bid)
+		b = fmt.Sprintf("%s - Bid: %.2f Change: %.2f [%.2f]", tm.In(location).Format("15:04:05"), bid, chng, pct)
 	}
 	return b
 }
