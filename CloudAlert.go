@@ -34,7 +34,7 @@ type Quote struct {
 }
 
 var (
-	asset   = "FEUVOL"
+	asset   = os.Getenv("ASSET")
 	h       = os.Getenv("HIGH")
 	l       = os.Getenv("LOW")
 	appID   = os.Getenv("APP_ID")
