@@ -40,6 +40,11 @@ var (
 	appID   = os.Getenv("APP_ID")
 	groupID = os.Getenv("GROUP_ID")
 	city    = "Europe/Warsaw"
+	apiURL  = fmt.Sprintf("https://api.30.bossa.pl/API/FX/v1/SYMBOLS/%s.", asset)
+	// http.Clients should be reused instead of created as needed.
+	client = &http.Client{
+		Timeout: 3 * time.Second,
+	}
 )
 
 func init() {
@@ -54,7 +59,6 @@ func CloudAlert(w http.ResponseWriter, r *http.Request) {
 	var high, low float64
 	query := r.URL.Query()
 	if hq := query.Get("h"); hq != "" {
-
 		high, _ = strconv.ParseFloat(hq, 64)
 	} else {
 		high, _ = strconv.ParseFloat(h, 64)
@@ -77,8 +81,7 @@ func CloudAlert(w http.ResponseWriter, r *http.Request) {
 
 func scrap(high *float64, low *float64) string {
 	var b string
-	url := fmt.Sprintf("https://api.30.bossa.pl/API/FX/v1/SYMBOLS/%s.", asset)
-	if response, err := http.Get(url); err != nil {
+	if response, err := client.Get(apiURL); err != nil {
 		log.Fatalln(err.Error())
 	} else {
 		var body Quotes
