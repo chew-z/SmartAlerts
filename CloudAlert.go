@@ -98,7 +98,7 @@ func scrap(high *float64, low *float64) string {
 		}
 		// log.Printf("High: %.2f, Low: %.2f", *high, *low)
 		// log.Printf("%s - Bid: %.2f", tm.In(location).Format("15:04:05"), body[0].BidPrice)
-		b = fmt.Sprintf("%s - Bid: %.2f Change: %.2f [%.2f]", tm.In(location).Format("15:04:05"), bid, chng, pct)
+		b = fmt.Sprintf("%s - Bid: %.2f Change: %.2f %s", tm.In(location).Format("15:04:05"), bid, chng, pct)
 	}
 	return b
 }
