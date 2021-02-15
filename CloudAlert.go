@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"strconv"
@@ -31,12 +32,16 @@ type Quote struct {
 	QuoteTm          int64   `json:"_quote_tm"`
 	Pips             float64 `json:"_pips"`
 	PipsLot          float64 `json:"_pips_lot"`
+	Digits           float64 `json:"_digits"`
+	MonthMin         float64 `json:"_30d_min_bid_price"`
+	MonthMax         float64 `json:"_30d_max_bid_price"`
 }
 
 var (
 	asset   = os.Getenv("ASSET")
 	h       = os.Getenv("HIGH")
 	l       = os.Getenv("LOW")
+	t       = os.Getenv("TARGET")
 	appID   = os.Getenv("APP_ID")
 	groupID = os.Getenv("GROUP_ID")
 	city    = "Europe/Warsaw"
@@ -56,7 +61,7 @@ func main() {
 /*CloudAlert - ..
  */
 func CloudAlert(w http.ResponseWriter, r *http.Request) {
-	var high, low float64
+	var high, low, target float64
 	query := r.URL.Query()
 	if hq := query.Get("h"); hq != "" {
 		high, _ = strconv.ParseFloat(hq, 64)
@@ -68,10 +73,15 @@ func CloudAlert(w http.ResponseWriter, r *http.Request) {
 	} else {
 		low, _ = strconv.ParseFloat(l, 64)
 	}
+	if tq := query.Get("t"); tq != "" {
+		target, _ = strconv.ParseFloat(tq, 64)
+	} else {
+		target, _ = strconv.ParseFloat(t, 64)
+	}
 	if a := query.Get("a"); a != "" {
 		asset = a
 	}
-	bid := scrap(&high, &low)
+	bid := processSignals(&high, &low, &target)
 	w.WriteHeader(http.StatusOK)
 	response := bid
 	if err := json.NewEncoder(w).Encode(&response); err != nil {
@@ -79,7 +89,10 @@ func CloudAlert(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func scrap(high *float64, low *float64) string {
+/*processSignals - gets data from BOŚ API and logic of signals
+This is stateless function
+*/
+func processSignals(high *float64, low *float64, target *float64) string {
 	var b string
 	if response, err := client.Get(apiURL); err != nil {
 		log.Fatalln(err.Error())
@@ -92,21 +105,32 @@ func scrap(high *float64, low *float64) string {
 		bid := body[0].BidPrice
 		chng := body[0].BidDayChange
 		pct := body[0].BidDayChangePcnt
-		if bid > *high {
+		b = fmt.Sprintf("%s - Bid: %.2f Change: %.2f %s", tm.In(location).Format("15:04:05"), bid, chng, pct)
+		// Main logic loop
+		if math.Abs(*target-bid) < 2.00 {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
-			alert(msg, "Making money")
+			sendAlert(msg, "Closing in on target price")
+		} else if bid > *high {
+			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
+			sendAlert(msg, "Making money")
 		} else if bid < *low {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
-			alert(msg, "Losing money!")
+			sendAlert(msg, "Losing money!")
+		} else if math.Abs(chng) > 2.00 {
+			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
+			sendAlert(msg, "Big move today!")
+		} else if max30 := body[0].MonthMax; (max30 - bid) < 2.00 {
+			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
+			sendAlert(msg, "Melting up!")
+		} else if min30 := body[0].MonthMin; (bid - min30) < 0.50 {
+			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
+			sendAlert(msg, "Melting down!")
 		}
-		// log.Printf("High: %.2f, Low: %.2f", *high, *low)
-		// log.Printf("%s - Bid: %.2f", tm.In(location).Format("15:04:05"), body[0].BidPrice)
-		b = fmt.Sprintf("%s - Bid: %.2f Change: %.2f %s", tm.In(location).Format("15:04:05"), bid, chng, pct)
 	}
 	return b
 }
 
-func alert(tittle string, text string) {
+func sendAlert(tittle string, text string) {
 	// Create a new pushover app with a token
 	app := pushover.New(appID)
 	// Create a new recipient
