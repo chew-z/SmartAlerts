@@ -38,26 +38,25 @@ type Quote struct {
 }
 
 var (
-	asset        = os.Getenv("ASSET")
-	h            = os.Getenv("HIGH")
-	l            = os.Getenv("LOW")
-	t            = os.Getenv("TARGET")
-	mUp          = os.Getenv("MELTUP")
-	mDown        = os.Getenv("MELTDOWN")
-	lMove        = os.Getenv("LARGE_MOVE")
-	appID        = os.Getenv("APP_ID")
-	groupID      = os.Getenv("GROUP_ID")
-	city         = "Europe/Warsaw"
-	location, _  = time.LoadLocation(city)
-	meltUp, _    = strconv.ParseFloat(mUp, 64)
-	meltDown, _  = strconv.ParseFloat(mDown, 64)
-	largeMove, _ = strconv.ParseFloat(lMove, 64)
-	apiURL       = fmt.Sprintf("https://api.30.bossa.pl/API/FX/v1/SYMBOLS/%s.", asset)
-	webpageURL   = fmt.Sprintf("https://bossafx.pl/oferta/instrumenty/%s.", asset)
+	asset         = os.Getenv("ASSET")
+	h             = os.Getenv("HIGH")
+	l             = os.Getenv("LOW")
+	t             = os.Getenv("TARGET")
+	appID         = os.Getenv("APP_ID")
+	groupID       = os.Getenv("GROUP_ID")
+	meltUp, _     = strconv.ParseFloat(os.Getenv("MELTUP"), 64)
+	meltDown, _   = strconv.ParseFloat(os.Getenv("MELTDOWN"), 64)
+	largeMove, _  = strconv.ParseFloat(os.Getenv("LARGE_MOVE"), 64)
+	targetZone, _ = strconv.ParseFloat(os.Getenv("LARGE_MOVE"), 64)
+	apiURL        = fmt.Sprintf("%s%s.", os.Getenv("API_URL"), asset)
+	webpageURL    = fmt.Sprintf("%s%s.", os.Getenv("WEB_URL"), asset)
 	// http.Clients should be reused instead of created as needed.
 	client = &http.Client{
 		Timeout: 3 * time.Second,
 	}
+	userAgent   = randUserAgent()
+	city        = os.Getenv("CITY")
+	location, _ = time.LoadLocation(city)
 	// Create a new pushover app with a token
 	app = pushover.New(appID)
 	// Create a new recipient
@@ -106,11 +105,12 @@ This is stateless function
 */
 func processSignals(high *float64, low *float64, target *float64) string {
 	var b string
-	if response, err := client.Get(apiURL); err != nil {
+	request, _ := http.NewRequest("GET", apiURL, nil)
+	request.Header.Set("User-Agent", userAgent)
+	if response, err := client.Do(request); err != nil {
 		log.Fatalln(err.Error())
 	} else {
 		var body Quotes
-		defer response.Body.Close()
 		json.NewDecoder(response.Body).Decode(&body)
 		tm := time.Unix(0, body[0].QuoteTm*int64(time.Millisecond))
 		bid := body[0].BidPrice
@@ -118,7 +118,7 @@ func processSignals(high *float64, low *float64, target *float64) string {
 		pct := body[0].BidDayChangePcnt
 		b = fmt.Sprintf("%s - Bid: %.2f Change: %.2f %s", tm.In(location).Format("15:04:05"), bid, chng, pct)
 		// Main logic loop
-		if math.Abs(*target-bid) < 2.00 {
+		if math.Abs(*target-bid) < targetZone {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
 			sendAlert(msg, "Closing in on target price", pushover.PriorityEmergency, tm)
 		} else if bid > *high {
