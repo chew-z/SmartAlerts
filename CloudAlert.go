@@ -26,7 +26,6 @@ type Quote struct {
 	RefBidPrice      float64 `json:"_ref_bid_price"`
 	HighBidPrice     float64 `json:"_high_bid_price"`
 	LowBidPrice      float64 `json:"_low_bid_price"`
-	MidPrice         float64 `json:"_mid_price"`
 	BidDayChange     float64 `json:"_bid_day_change"`
 	BidDayChangePcnt string  `json:"_bid_day_change_pcnt"`
 	QuoteTm          int64   `json:"_quote_tm"`
@@ -47,7 +46,7 @@ var (
 	meltUp, _     = strconv.ParseFloat(os.Getenv("MELTUP"), 64)
 	meltDown, _   = strconv.ParseFloat(os.Getenv("MELTDOWN"), 64)
 	largeMove, _  = strconv.ParseFloat(os.Getenv("LARGE_MOVE"), 64)
-	targetZone, _ = strconv.ParseFloat(os.Getenv("LARGE_MOVE"), 64)
+	targetZone, _ = strconv.ParseFloat(os.Getenv("TARGET_ZONE"), 64)
 	apiURL        = fmt.Sprintf("%s%s.", os.Getenv("API_URL"), asset)
 	webpageURL    = fmt.Sprintf("%s%s.", os.Getenv("WEB_URL"), asset)
 	// http.Clients should be reused instead of created as needed.
