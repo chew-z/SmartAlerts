@@ -38,14 +38,15 @@ type Quote struct {
 }
 
 var (
-	asset   = os.Getenv("ASSET")
-	h       = os.Getenv("HIGH")
-	l       = os.Getenv("LOW")
-	t       = os.Getenv("TARGET")
-	appID   = os.Getenv("APP_ID")
-	groupID = os.Getenv("GROUP_ID")
-	city    = "Europe/Warsaw"
-	apiURL  = fmt.Sprintf("https://api.30.bossa.pl/API/FX/v1/SYMBOLS/%s.", asset)
+	asset      = os.Getenv("ASSET")
+	h          = os.Getenv("HIGH")
+	l          = os.Getenv("LOW")
+	t          = os.Getenv("TARGET")
+	appID      = os.Getenv("APP_ID")
+	groupID    = os.Getenv("GROUP_ID")
+	city       = "Europe/Warsaw"
+	apiURL     = fmt.Sprintf("https://api.30.bossa.pl/API/FX/v1/SYMBOLS/%s.", asset)
+	webpageURL = fmt.Sprintf("https://bossafx.pl/oferta/instrumenty/%s.", asset)
 	// http.Clients should be reused instead of created as needed.
 	client = &http.Client{
 		Timeout: 3 * time.Second,
@@ -109,36 +110,52 @@ func processSignals(high *float64, low *float64, target *float64) string {
 		// Main logic loop
 		if math.Abs(*target-bid) < 2.00 {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
-			sendAlert(msg, "Closing in on target price")
+			sendAlert(msg, "Closing in on target price", pushover.PriorityEmergency, tm)
 		} else if bid > *high {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
-			sendAlert(msg, "Making money")
+			sendAlert(msg, "Making money", pushover.PriorityNormal, tm)
 		} else if bid < *low {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
-			sendAlert(msg, "Losing money!")
+			sendAlert(msg, "Losing money!", pushover.PriorityNormal, tm)
 		} else if math.Abs(chng) > 2.00 {
 			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
-			sendAlert(msg, "Big move today!")
+			sendAlert(msg, "Big move today!", pushover.PriorityHigh, tm)
 		} else if max30 := body[0].MonthMax; (max30 - bid) < 2.00 {
 			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
-			sendAlert(msg, "Melting up!")
+			sendAlert(msg, "Melting up!", pushover.PriorityHigh, tm)
 		} else if min30 := body[0].MonthMin; (bid - min30) < 0.50 {
 			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
-			sendAlert(msg, "Melting down!")
+			sendAlert(msg, "Melting down!", pushover.PriorityHigh, tm)
 		}
 	}
 	return b
 }
 
-func sendAlert(tittle string, text string) {
+func sendAlert(msgText string, title string, priority int, ts time.Time) {
 	// Create a new pushover app with a token
 	app := pushover.New(appID)
 	// Create a new recipient
 	recipient := pushover.NewRecipient(groupID)
 	// Create the message to send
-	message := pushover.NewMessageWithTitle(text, tittle)
+	message := pushover.Message{
+		Message:   msgText,
+		Title:     title,
+		Priority:  priority,
+		URL:       webpageURL,
+		URLTitle:  asset,
+		Timestamp: ts.Unix(),
+	}
+	if priority == 2 {
+		message.Sound = pushover.SoundIncoming
+		message.Retry = 60 * time.Second
+		message.Expire = 3 * time.Minute
+	} else if priority == 1 {
+		message.Sound = pushover.SoundCashRegister
+	} else {
+		message.Sound = "vibrate"
+	}
 	// Send the message to the recipient
-	if _, err := app.SendMessage(message, recipient); err != nil {
+	if _, err := app.SendMessage(&message, recipient); err != nil {
 		log.Println(err.Error())
 	}
 }
