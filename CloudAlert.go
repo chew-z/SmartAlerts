@@ -153,11 +153,11 @@ func sendAlert(msgText string, title string, priority int, ts time.Time) {
 	if priority == 2 {
 		message.Sound = pushover.SoundIncoming
 		message.Retry = 60 * time.Second
-		message.Expire = 3 * time.Minute
+		message.Expire = 4 * time.Minute
 	} else if priority == 1 {
 		message.Sound = pushover.SoundCashRegister
 	} else {
-		message.Sound = "vibrate"
+		message.Sound = pushover.SoundVibrate
 	}
 	// Send the message to the recipient
 	if _, err := app.SendMessage(&message, recipient); err != nil {
