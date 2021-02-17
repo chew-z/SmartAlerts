@@ -47,8 +47,6 @@ var (
 	meltDown, _   = strconv.ParseFloat(os.Getenv("MELTDOWN"), 64)
 	largeMove, _  = strconv.ParseFloat(os.Getenv("LARGE_MOVE"), 64)
 	targetZone, _ = strconv.ParseFloat(os.Getenv("TARGET_ZONE"), 64)
-	apiURL        = fmt.Sprintf("%s%s.", os.Getenv("API_URL"), asset)
-	webpageURL    = fmt.Sprintf("%s%s.", os.Getenv("WEB_URL"), asset)
 	// http.Clients should be reused instead of created as needed.
 	client = &http.Client{
 		Timeout: 3 * time.Second,
@@ -104,6 +102,7 @@ This is stateless function
 */
 func processSignals(high *float64, low *float64, target *float64) string {
 	var b string
+	apiURL := fmt.Sprintf("%s%s.", os.Getenv("API_URL"), asset)
 	request, _ := http.NewRequest("GET", apiURL, nil)
 	request.Header.Set("User-Agent", userAgent)
 	if response, err := client.Do(request); err != nil {
@@ -141,6 +140,7 @@ func processSignals(high *float64, low *float64, target *float64) string {
 }
 
 func sendAlert(msgText string, title string, priority int, ts time.Time) {
+	webpageURL := fmt.Sprintf("%s%s.", os.Getenv("WEB_URL"), asset)
 	// Create the message to send
 	message := pushover.Message{
 		Message:   msgText,
