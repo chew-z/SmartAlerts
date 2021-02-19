@@ -140,7 +140,8 @@ func processSignals(high *float64, low *float64, target *float64) string {
 }
 
 func sendAlert(msgText string, title string, priority int, ts time.Time) {
-	webpageURL := fmt.Sprintf("%s%s.", os.Getenv("WEB_URL"), asset)
+	// webpageURL := fmt.Sprintf("%s%s.", os.Getenv("WEB_URL"), asset)
+	webpageURL := fmt.Sprintf("%s?a=%s", os.Getenv("WEB_URL"), asset)
 	// Create the message to send
 	message := pushover.Message{
 		Message:   msgText,
