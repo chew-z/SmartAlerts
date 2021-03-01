@@ -114,6 +114,8 @@ func processSignals(high *float64, low *float64, target *float64) string {
 		bid := body[0].BidPrice
 		chng := body[0].BidDayChange
 		pct := body[0].BidDayChangePcnt
+		h := body[0].HighBidPrice
+		l := body[0].LowBidPrice
 		b = fmt.Sprintf("%s - Bid: %.2f Change: %.2f %s", tm.In(location).Format("15:04:05"), bid, chng, pct)
 		// Main logic loop
 		if math.Abs(*target-bid) < targetZone {
@@ -125,16 +127,20 @@ func processSignals(high *float64, low *float64, target *float64) string {
 		} else if bid < *low {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
 			sendAlert(msg, "Losing money!", pushover.PriorityNormal, tm)
+		} else if (h - l) > largeMove {
+			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
+			sendAlert(msg, "Big volatility today!", pushover.PriorityHigh, tm)
 		} else if math.Abs(chng) > largeMove {
 			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
 			sendAlert(msg, "Big move today!", pushover.PriorityHigh, tm)
-		} else if max30 := body[0].MonthMax; (max30 - bid) < meltUp {
-			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
-			sendAlert(msg, "Melting up!", pushover.PriorityHigh, tm)
-		} else if min30 := body[0].MonthMin; (bid - min30) < meltDown {
-			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
-			sendAlert(msg, "Melting down!", pushover.PriorityHigh, tm)
 		}
+		// else if max30 := body[0].MonthMax; (max30 - bid) < meltUp {
+		// 	msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
+		// 	sendAlert(msg, "Melting up!", pushover.PriorityHigh, tm)
+		// } else if min30 := body[0].MonthMin; (bid - min30) < meltDown {
+		// 	msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
+		// 	sendAlert(msg, "Melting down!", pushover.PriorityHigh, tm)
+		// }
 	}
 	return b
 }
