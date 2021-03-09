@@ -123,10 +123,10 @@ func processSignals(high *float64, low *float64, target *float64) string {
 			sendAlert(msg, "Closing in on target price", pushover.PriorityEmergency, tm)
 		} else if bid > *high {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
-			sendAlert(msg, "Making money", pushover.PriorityNormal, tm)
+			sendAlert(msg, "Above higher band", pushover.PriorityNormal, tm)
 		} else if bid < *low {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
-			sendAlert(msg, "Losing money!", pushover.PriorityNormal, tm)
+			sendAlert(msg, "Below lower band", pushover.PriorityNormal, tm)
 		} else if (h - l) > largeMove {
 			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
 			sendAlert(msg, "Big volatility today!", pushover.PriorityHigh, tm)
