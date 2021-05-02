@@ -121,18 +121,18 @@ func processSignals(high *float64, low *float64, target *float64) string {
 		if math.Abs(*target-bid) < targetZone {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
 			sendAlert(msg, "Closing in on target price", pushover.PriorityEmergency, tm)
-		} else if bid > *high {
-			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
-			sendAlert(msg, "Above higher band", pushover.PriorityNormal, tm)
-		} else if bid < *low {
-			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
-			sendAlert(msg, "Below lower band", pushover.PriorityNormal, tm)
 		} else if (h - l) > largeMove {
 			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
 			sendAlert(msg, "Big volatility today!", pushover.PriorityHigh, tm)
 		} else if math.Abs(chng) > largeMove {
 			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
 			sendAlert(msg, "Big move today!", pushover.PriorityHigh, tm)
+		} else if bid > *high {
+			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
+			sendAlert(msg, "Above higher band", pushover.PriorityNormal, tm)
+		} else if bid < *low {
+			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
+			sendAlert(msg, "Below lower band", pushover.PriorityNormal, tm)
 		}
 		// else if max30 := body[0].MonthMax; (max30 - bid) < meltUp {
 		// 	msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
