@@ -1,4 +1,4 @@
-package cloudalert
+package cloudalerts
 
 import (
 	"encoding/json"
@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gregdel/pushover"
@@ -37,20 +38,19 @@ type Quote struct {
 }
 
 var (
-	asset         = os.Getenv("ASSET")
-	h             = os.Getenv("HIGH")
-	l             = os.Getenv("LOW")
-	t             = os.Getenv("TARGET")
+	assets        = strings.Split(os.Getenv("ASSETS"), ":")
+	h             = strings.Split(os.Getenv("HIGH"), ":")
+	l             = strings.Split(os.Getenv("LOW"), ":")
+	t             = strings.Split(os.Getenv("TARGET"), ":")
 	appID         = os.Getenv("APP_ID")
 	groupID       = os.Getenv("GROUP_ID")
-	meltUp, _     = strconv.ParseFloat(os.Getenv("MELTUP"), 64)
-	meltDown, _   = strconv.ParseFloat(os.Getenv("MELTDOWN"), 64)
 	largeMove, _  = strconv.ParseFloat(os.Getenv("LARGE_MOVE"), 64)
 	targetZone, _ = strconv.ParseFloat(os.Getenv("TARGET_ZONE"), 64)
 	// http.Clients should be reused instead of created as needed.
 	client = &http.Client{
 		Timeout: 3 * time.Second,
 	}
+	webpage     = os.Getenv("WEB_URL")
 	userAgent   = randUserAgent()
 	city        = os.Getenv("CITY")
 	location, _ = time.LoadLocation(city)
@@ -66,32 +66,19 @@ func init() {
 func main() {
 }
 
-/*CloudAlert - ..
+/*CloudAlerts - ..
  */
-func CloudAlert(w http.ResponseWriter, r *http.Request) {
-	var high, low, target float64
-	query := r.URL.Query()
-	if hq := query.Get("h"); hq != "" {
-		high, _ = strconv.ParseFloat(hq, 64)
-	} else {
-		high, _ = strconv.ParseFloat(h, 64)
+func CloudAlerts(w http.ResponseWriter, r *http.Request) {
+	for i, asset := range assets {
+		var high, low, target float64
+		high, _ = strconv.ParseFloat(h[i], 64)
+		low, _ = strconv.ParseFloat(l[i], 64)
+		target, _ = strconv.ParseFloat(t[i], 64)
+		bid := processSignals(asset, &high, &low, &target)
+		log.Println(bid)
 	}
-	if lq := query.Get("l"); lq != "" {
-		low, _ = strconv.ParseFloat(lq, 64)
-	} else {
-		low, _ = strconv.ParseFloat(l, 64)
-	}
-	if tq := query.Get("t"); tq != "" {
-		target, _ = strconv.ParseFloat(tq, 64)
-	} else {
-		target, _ = strconv.ParseFloat(t, 64)
-	}
-	if a := query.Get("a"); a != "" {
-		asset = a
-	}
-	bid := processSignals(&high, &low, &target)
 	w.WriteHeader(http.StatusOK)
-	response := bid
+	response := "OK"
 	if err := json.NewEncoder(w).Encode(&response); err != nil {
 		log.Println(err.Error())
 	}
@@ -100,7 +87,7 @@ func CloudAlert(w http.ResponseWriter, r *http.Request) {
 /*processSignals - gets data from BOŚ API and logic of signals
 This is stateless function
 */
-func processSignals(high *float64, low *float64, target *float64) string {
+func processSignals(asset string, high *float64, low *float64, target *float64) string {
 	var b string
 	apiURL := fmt.Sprintf("%s%s.", os.Getenv("API_URL"), asset)
 	request, _ := http.NewRequest("GET", apiURL, nil)
@@ -120,19 +107,19 @@ func processSignals(high *float64, low *float64, target *float64) string {
 		// Main logic loop
 		if math.Abs(*target-bid) < targetZone {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
-			sendAlert(msg, "Closing in on target price", pushover.PriorityEmergency, tm)
+			sendAlert(msg, "Closing in on target price", asset, pushover.PriorityEmergency, tm)
 		} else if (h - l) > largeMove {
 			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
-			sendAlert(msg, "Big volatility today!", pushover.PriorityHigh, tm)
+			sendAlert(msg, "Big volatility today!", asset, pushover.PriorityHigh, tm)
 		} else if math.Abs(chng) > largeMove {
 			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
-			sendAlert(msg, "Big move today!", pushover.PriorityHigh, tm)
+			sendAlert(msg, "Big move today!", asset, pushover.PriorityHigh, tm)
 		} else if bid > *high {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
-			sendAlert(msg, "Above higher band", pushover.PriorityNormal, tm)
+			sendAlert(msg, "Above higher band", asset, pushover.PriorityNormal, tm)
 		} else if bid < *low {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
-			sendAlert(msg, "Below lower band", pushover.PriorityNormal, tm)
+			sendAlert(msg, "Below lower band", asset, pushover.PriorityNormal, tm)
 		}
 		// else if max30 := body[0].MonthMax; (max30 - bid) < meltUp {
 		// 	msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
@@ -145,8 +132,8 @@ func processSignals(high *float64, low *float64, target *float64) string {
 	return b
 }
 
-func sendAlert(msgText string, title string, priority int, ts time.Time) {
-	webpageURL := fmt.Sprintf("%s?a=%s", os.Getenv("WEB_URL"), asset)
+func sendAlert(msgText string, title string, asset string, priority int, ts time.Time) {
+	webpageURL := fmt.Sprintf("%s?a=%s", webpage, asset)
 	// Create the message to send
 	message := pushover.Message{
 		Message:   msgText,

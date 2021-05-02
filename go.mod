@@ -1,5 +1,5 @@
-module smart-alerts.rrj.pl/cloudalert
+module smart-alerts.rrj.pl/cloudalerts
 
-go 1.15
+go 1.16
 
-require github.com/gregdel/pushover v0.0.0-20210216095829-2131362cb888
+require github.com/gregdel/pushover v1.0.0
