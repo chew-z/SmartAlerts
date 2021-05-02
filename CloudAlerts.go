@@ -74,8 +74,7 @@ func CloudAlerts(w http.ResponseWriter, r *http.Request) {
 		high, _ = strconv.ParseFloat(h[i], 64)
 		low, _ = strconv.ParseFloat(l[i], 64)
 		target, _ = strconv.ParseFloat(t[i], 64)
-		bid := processSignals(asset, &high, &low, &target)
-		log.Println(bid)
+		processSignals(asset, &high, &low, &target)
 	}
 	w.WriteHeader(http.StatusOK)
 	response := "OK"
@@ -84,11 +83,10 @@ func CloudAlerts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-/*processSignals - gets data from BOŚ API and logic of signals
+/*processSignals - gets data from BOŚ API and process logic of signals
 This is stateless function
 */
-func processSignals(asset string, high *float64, low *float64, target *float64) string {
-	var b string
+func processSignals(asset string, high *float64, low *float64, target *float64) {
 	apiURL := fmt.Sprintf("%s%s.", os.Getenv("API_URL"), asset)
 	request, _ := http.NewRequest("GET", apiURL, nil)
 	request.Header.Set("User-Agent", userAgent)
@@ -103,7 +101,6 @@ func processSignals(asset string, high *float64, low *float64, target *float64) 
 		pct := body[0].BidDayChangePcnt
 		h := body[0].HighBidPrice
 		l := body[0].LowBidPrice
-		b = fmt.Sprintf("%s - Bid: %.2f Change: %.2f %s", tm.In(location).Format("15:04:05"), bid, chng, pct)
 		// Main logic loop
 		if math.Abs(*target-bid) < targetZone {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
@@ -129,17 +126,15 @@ func processSignals(asset string, high *float64, low *float64, target *float64) 
 		// 	sendAlert(msg, "Melting down!", pushover.PriorityHigh, tm)
 		// }
 	}
-	return b
 }
 
 func sendAlert(msgText string, title string, asset string, priority int, ts time.Time) {
-	webpageURL := fmt.Sprintf("%s?a=%s", webpage, asset)
-	// Create the message to send
+	// Create the message
 	message := pushover.Message{
 		Message:   msgText,
 		Title:     title,
 		Priority:  priority,
-		URL:       webpageURL,
+		URL:       fmt.Sprintf("%s?a=%s", webpage, asset),
 		URLTitle:  fmt.Sprintf("Chart %s", asset),
 		Timestamp: ts.Unix(),
 	}
@@ -152,7 +147,7 @@ func sendAlert(msgText string, title string, asset string, priority int, ts time
 	} else {
 		message.Sound = pushover.SoundVibrate
 	}
-	// Send the message to the recipient
+	// Send the message
 	if _, err := app.SendMessage(&message, recipient); err != nil {
 		log.Println(err.Error())
 	}
