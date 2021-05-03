@@ -42,6 +42,7 @@ var (
 	h             = strings.Split(os.Getenv("HIGH"), ":")
 	l             = strings.Split(os.Getenv("LOW"), ":")
 	t             = strings.Split(os.Getenv("TARGET"), ":")
+	te             = strings.Split(os.Getenv("ENDHOUR"), ":")
 	appID         = os.Getenv("APP_ID")
 	groupID       = os.Getenv("GROUP_ID")
 	largeMove, _  = strconv.ParseFloat(os.Getenv("LARGE_MOVE"), 64)
@@ -70,11 +71,14 @@ func main() {
  */
 func CloudAlerts(w http.ResponseWriter, r *http.Request) {
 	for i, asset := range assets {
-		var high, low, target float64
-		high, _ = strconv.ParseFloat(h[i], 64)
-		low, _ = strconv.ParseFloat(l[i], 64)
-		target, _ = strconv.ParseFloat(t[i], 64)
-		processSignals(asset, &high, &low, &target)
+		tn := time.Now().In(location).Format("1504")
+		if tn < te[i] {
+			var high, low, target float64
+			high, _ = strconv.ParseFloat(h[i], 64)
+			low, _ = strconv.ParseFloat(l[i], 64)
+			target, _ = strconv.ParseFloat(t[i], 64)
+			processSignals(asset, &high, &low, &target)
+		}
 	}
 	w.WriteHeader(http.StatusOK)
 	response := "OK"
