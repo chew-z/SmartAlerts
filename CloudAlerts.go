@@ -95,7 +95,7 @@ func processSignals(asset string, high *float64, low *float64, target *float64) 
 	request, _ := http.NewRequest("GET", apiURL, nil)
 	request.Header.Set("User-Agent", userAgent)
 	if response, err := client.Do(request); err != nil {
-		log.Fatalln(err.Error())
+		log.Println(err.Error())
 	} else {
 		var body Quotes
 		json.NewDecoder(response.Body).Decode(&body)

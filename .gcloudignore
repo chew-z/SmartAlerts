@@ -5,4 +5,3 @@ README.md
 .gitignore
 *.bak
 *.json
-CloudScrap.go
