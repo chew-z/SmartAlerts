@@ -42,7 +42,7 @@ var (
 	h             = strings.Split(os.Getenv("HIGH"), ":")
 	l             = strings.Split(os.Getenv("LOW"), ":")
 	t             = strings.Split(os.Getenv("TARGET"), ":")
-	te             = strings.Split(os.Getenv("ENDHOUR"), ":")
+	te            = strings.Split(os.Getenv("ENDHOUR"), ":")
 	appID         = os.Getenv("APP_ID")
 	groupID       = os.Getenv("GROUP_ID")
 	largeMove, _  = strconv.ParseFloat(os.Getenv("LARGE_MOVE"), 64)
@@ -101,20 +101,14 @@ func processSignals(asset string, high *float64, low *float64, target *float64) 
 		json.NewDecoder(response.Body).Decode(&body)
 		tm := time.Unix(0, body[0].QuoteTm*int64(time.Millisecond))
 		bid := body[0].BidPrice
-		chng := body[0].BidDayChange
-		pct := body[0].BidDayChangePcnt
-		h := body[0].HighBidPrice
-		l := body[0].LowBidPrice
+		// chng := body[0].BidDayChange
+		// pct := body[0].BidDayChangePcnt
+		// h := body[0].HighBidPrice
+		// l := body[0].LowBidPrice
 		// Main logic loop
 		if math.Abs(*target-bid) < targetZone {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
 			sendAlert(msg, "Closing in on target price", asset, pushover.PriorityEmergency, tm)
-		} else if (h - l) > largeMove {
-			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
-			sendAlert(msg, "Big volatility today!", asset, pushover.PriorityHigh, tm)
-		} else if math.Abs(chng) > largeMove {
-			msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
-			sendAlert(msg, "Big move today!", asset, pushover.PriorityHigh, tm)
 		} else if bid > *high {
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
 			sendAlert(msg, "Above higher band", asset, pushover.PriorityNormal, tm)
@@ -122,6 +116,12 @@ func processSignals(asset string, high *float64, low *float64, target *float64) 
 			msg := fmt.Sprintf("%s is now at %.2f", asset, bid)
 			sendAlert(msg, "Below lower band", asset, pushover.PriorityNormal, tm)
 		}
+		// } else if (h - l) > largeMove {
+		// 	msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
+		// 	sendAlert(msg, "Big volatility today!", asset, pushover.PriorityHigh, tm)
+		// } else if math.Abs(chng) > largeMove {
+		// 	msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
+		// 	sendAlert(msg, "Big move today!", asset, pushover.PriorityHigh, tm)
 		// else if max30 := body[0].MonthMax; (max30 - bid) < meltUp {
 		// 	msg := fmt.Sprintf("%s is now at %.2f, %s", asset, bid, pct)
 		// 	sendAlert(msg, "Melting up!", pushover.PriorityHigh, tm)
